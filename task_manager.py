@@ -72,13 +72,15 @@ class TaskManager:
         self.box: Optional['Gtk.Box'] = None
 
     def render(self):
-        self.box = Gtk.Box()
+        self.box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         return self.box
 
+    @gtk_func
     def remove_task(self, task, task_box):
         self.box.remove(task_box)
         self.tasks.remove(task)
 
+    @gtk_func
     def add_task(self, task: Task):
         self.tasks.append(task)
         if self.box is not None:
@@ -100,7 +102,7 @@ global_task_manager_loop = make_thread_loop()
 async def _wrap_async_task(coro, task: Task):
     if isasyncgen(coro):
         async for msg in coro:
-            task.set_message(msg)
+            task.set_message(str(msg))
     else:
         await coro
 

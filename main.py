@@ -7,13 +7,14 @@
 #     'username': 'root',
 #     # 'compression': False,
 # })
-from time import sleep
+import time
+from asyncio import sleep
 
 import env  # noqa
 import vm  # noqa
-from gui import Gtk, HierarchyView, gtk_func, global_gtk_loop
+from gui import Gtk, HierarchyView, gtk_func, global_gtk_loop, stop_gtk_loop
 from loader import ObjectLoader
-from task_manager import global_task_manager
+from task_manager import global_task_manager, run_task, global_task_manager_loop
 
 # css = b'''
 # .error {
@@ -79,15 +80,25 @@ def create_windows():
     win.show_all()
 
     win = Gtk.Window()
-    win.connect("destroy", Gtk.main_quit)
+    win.connect("destroy", stop_gtk_loop)
     win.add(HierarchyView(loader).render())
     win.show_all()
 
 
+async def monitor():
+    a = 1
+    while True:
+        await sleep(1.)
+        a += 1
+        yield a
+
+
+run_task(monitor(), 'test')
+
 create_windows()
 
-while global_gtk_loop.is_running():
-    sleep(.1)
+while global_gtk_loop.is_running() and global_task_manager_loop.is_running():
+    time.sleep(.1)
 
 loader.save_all()
 

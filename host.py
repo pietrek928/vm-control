@@ -117,6 +117,7 @@ class SSHHost(ConfigObject):
 
     @StateChange('loaded', 'connected')
     async def connect(self):
+        print('aaaaaaa')
         self.session = await connect(
             host=self.host,
             port=self.port,
@@ -126,6 +127,7 @@ class SSHHost(ConfigObject):
                 client_version='xD',
             ),
         )
+        print('bbbbbbbbbbb')
 
     @StateChange('connected', 'loaded')
     async def disconnect(self):

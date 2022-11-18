@@ -17,9 +17,11 @@ if TYPE_CHECKING:
 
 T = TypeVar('T')
 
+gtk_run_loop = True
+
 
 async def gtk_main_thread():
-    while True:
+    while gtk_run_loop:
         while Gtk.events_pending():
             # if Gtk.main_iteration():
             #     print('exiting')
@@ -27,6 +29,11 @@ async def gtk_main_thread():
             Gtk.main_iteration()
             await sleep(0.)
         await sleep(.01)
+
+
+def stop_gtk_loop(obj):
+    global gtk_run_loop
+    gtk_run_loop = False
 
 
 global_gtk_loop = make_thread_loop(gtk_main_thread())
