@@ -14,7 +14,7 @@ import env  # noqa
 import vm  # noqa
 from gui import Gtk, HierarchyView, gtk_func, global_gtk_loop, stop_gtk_loop
 from loader import ObjectLoader
-from task_manager import global_task_manager, run_task, global_task_manager_loop
+from task_manager import global_task_manager, run_task
 
 # css = b'''
 # .error {
@@ -60,7 +60,20 @@ loader = ObjectLoader()
 #     'key': 'nv34yih4t34h'
 # })
 # loader._loaded['test/host/env'] = env
-# # vm = QemuVM('.', loader, {})
+# test_vm = vm.QemuVM('test/host/env/vm', loader, {
+#     'name': 'elo',
+#     'drives': 'test_drive',
+# })
+# loader._loaded['test/host/env/vm'] = test_vm
+# test_drive = vm.DriveImage('test/host/env/test_drive', loader, {
+#     'path': 'test_drive',
+#     'size_mb': 1e9,
+#     'mode': 'drive',
+#     'format': 'qcow2',
+# })
+# loader._loaded['test/host/env/test_drive'] = test_drive
+
+
 #
 # win = Gtk.Window()
 # win.connect("destroy", Gtk.main_quit)
@@ -71,6 +84,7 @@ loader = ObjectLoader()
 # win.connect("destroy", Gtk.main_quit)
 # win.add(env.render())
 # win.show_all()
+
 
 @gtk_func
 def create_windows():
@@ -93,11 +107,20 @@ async def monitor():
         yield a
 
 
+# async def test():
+#     host = loader.load('', '/test/host')
+#     print(await host.run_command(
+#         '( F=$(mktemp /tmp/key.XXXXXXXXXX) && ( cat > "${F}" ) && ls "/home/pietrek/.test-env" && fscrypt unlock "/home/pietrek/.test-env" --key="$F" )',
+#         input=b'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+#     ))
+
+
 run_task(monitor(), 'test')
+# run_task(test(), 'test2')
 
 create_windows()
 
-while global_gtk_loop.is_running() and global_task_manager_loop.is_running():
+while global_gtk_loop.is_running():
     time.sleep(.1)
 
 loader.save_all()

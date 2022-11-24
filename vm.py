@@ -37,6 +37,7 @@ class QemuVM(ConfigObject):
 
     @StateChange('loaded', 'started')
     async def start(self):
+        print('aaaaaaaaaaaaaaa')
         cmd = ShellCommand(f'qemu-system-{self.arch}') \
             .a('name', self.name) \
             .a('enable-kvm') \
@@ -51,37 +52,42 @@ class QemuVM(ConfigObject):
         for d in self.drives.split(','):
             d = d.strip()
             if d:
-                cmd.a('drive', (await self.o(d).withstate('created')).get_mount_params())
+                cmd.a('drive', await (await self.o(d).withstate('created')).get_mount_params())
+
+        env = await self.get_env()
         # process ?
-        await self.o('$env').run_command(cmd.cmd)
+        await env.run_command(cmd.cmd)
 
 
 class DriveImage(ConfigObject):
     path: str = StrField()
-    base_img_path: str = StrField()
+    base_img_path: str = StrField(default='')
     size_mb: float = FloatField(default=1024.)
     mode: str = SelectField(values=('drive', 'cdrom-ro',))
     format: str = SelectField(values=('iso-ro', 'qcow2',))
 
     @StateChange('loaded', 'created')
     async def create(self):
+        env = await self.get_env()
         if self.format == 'qcow2':
-            cmd = f'( ls "{self.path}" || qemu-img create -f qcow2 '
+            cmd = f'( ls "{env.format_path(self.path)}" || qemu-img create -f qcow2 '
             if self.base_img_path:
-                cmd += f'-o backing_file="{self.base_img_path}" "{self.path}"'
+                cmd += f'-o backing_file="{env.format_path(self.base_img_path)}" "{env.format_path(self.path)}"'
             else:
-                cmd += f'"{self.path}" {self.size_mb / 1024.}G'
+                cmd += f'"{env.format_path(self.path)}" {self.size_mb / 1024.}G'
             cmd += ' )'
         else:
-            cmd = f'ls "{self.path}"'
-        await self.o('$env').run_command(cmd)
+            cmd = f'ls "{env.format_path(self.path)}"'
+        await env.run_command(cmd)
 
     @StateChange('created', 'loaded')
     async def remove(self):
-        await self.o('$env').run_command(f'rm -f {self.path}')
+        env = await self.get_env()
+        await env.run_command(f'rm -f {env.format_path(self.path)}')
 
-    def get_mount_params(self):
+    async def get_mount_params(self):
+        env = await self.get_env()
         if self.mode == 'cdrom-r':
-            return f'file={self.path},media=cdrom,readonly'
+            return f'file={env.format_path(self.path)},media=cdrom,readonly'
         elif self.mode == 'drive':
-            return f'file={self.path},format={self.format},if=virtio,discard=unmap,detect-zeroes=unmap'
+            return f'file={env.format_path(self.path)},format={self.format},if=virtio,discard=unmap,detect-zeroes=unmap'

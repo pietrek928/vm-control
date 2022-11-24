@@ -3,7 +3,7 @@ from asyncio.subprocess import PIPE
 from os import getlogin
 from typing import Iterable, Tuple, Union, Optional
 
-from asyncssh import connect, SSHClientConnectionOptions, SSHClientConnection
+from asyncssh import connect, SSHClientConnectionOptions, SSHClientConnection, ChannelOpenError
 
 from gui import ConfigObject, EnField, StrField, IntField, StateChange
 from session import CommandError, SessionProcess
@@ -117,7 +117,7 @@ class SSHHost(ConfigObject):
 
     @StateChange('loaded', 'connected')
     async def connect(self):
-        print('aaaaaaa')
+        print('connecting...')
         self.session = await connect(
             host=self.host,
             port=self.port,
@@ -127,7 +127,7 @@ class SSHHost(ConfigObject):
                 client_version='xD',
             ),
         )
-        print('bbbbbbbbbbb')
+        print('connected')
 
     @StateChange('connected', 'loaded')
     async def disconnect(self):
@@ -137,22 +137,37 @@ class SSHHost(ConfigObject):
         await session.wait_closed()
 
     async def run_command(
-            self, cmd: str, input: Union[str, bytes] = None,
-            timeout=None, envs: Iterable[Tuple[str, str]] = ()
+            self, cmd: str, input: Optional[Union[str, bytes]] = None,
+            timeout: Optional[float] = None, envs: Iterable[Tuple[str, str]] = (),
+            retry_count: int = 3
     ) -> str:
-        print(cmd)
+        print(f'{cmd} input={input}')
         if input:
             stdin = StreamReader()
+            if isinstance(input, str):
+                input = input.encode('utf-8')
             stdin.feed_data(input)
             stdin.feed_eof()
         else:
             stdin = PIPE
-        res = await (await self.withstate('connected')).session.run(
-            cmd, stdin=stdin,
-            timeout=timeout, env=tuple(envs)
-        )
+        try:
+            res = await (await self.withstate('connected')).session.run(
+                cmd, stdin=stdin, timeout=timeout, env=envs
+            )
+        except ChannelOpenError as e:
+            if 'SSH connection closed' in str(e) and retry_count > 0:
+                print('try reconnecting')
+                await self.connect.func(self)
+                return await self.run_command(
+                    cmd=cmd, timeout=timeout,
+                    envs=envs, retry_count=retry_count - 1
+                )
+            raise
+        print('eeeeeeeeeee', res)
 
-        exit_code = res.exit_status
+        exit_code = res.returncode
+        if exit_code is None:
+            raise RuntimeError('Unknown error')
         if exit_code:
             raise CommandError(
                 f'Command `{cmd}` failed with code {exit_code}; '

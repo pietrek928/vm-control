@@ -230,9 +230,9 @@ class StateChange:
         return self
 
 
-def _button_callback(func, self, descr, button):
+def _button_callback(self, state_to, descr, button):
     from task_manager import run_task
-    run_task(func(self), descr)
+    run_task(self.withstate(state_to), descr)
 
 
 class ConfigObject:
@@ -329,8 +329,8 @@ class ConfigObject:
                 button = Gtk.Button.new_with_label(label=name)
                 button.connect(
                     "clicked", partial(
-                        _button_callback, state_descr.func,
-                        self, f'{self._current_path} -> {name}',
+                        _button_callback, self, state_descr.state_to,
+                        f'{self._current_path} -> {name}',
                     )
                 )
                 grid.attach(button, 0, n, 1, 1)
@@ -345,6 +345,8 @@ class ConfigObject:
     async def _go_to_state(self, f, t):
         if f == t:
             return
+
+        print(f'{f} -> {t} ...')
 
         for prop in vars(type(self)).values():
             if isinstance(prop, StateChange) and prop.state_from == f and prop.state_to == t:

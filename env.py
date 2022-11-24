@@ -13,6 +13,16 @@ class Env(ConfigObject):
     environment: Tuple[Tuple[str, str], ...] = ()
     _full_dir = None
 
+    def format_path(self, d: Optional[str] = None):
+        if not self._full_dir:
+            return d
+        if not d:
+            return self._full_dir
+        if d.startswith('/'):
+            return d
+        else:
+            return f'{self._full_dir}/{d}'
+
     async def run_command(self, *a, **k):
         host = await self.get_host()
         return await host.run_command(*a, envs=self.environment, **k)
@@ -27,6 +37,7 @@ class Env(ConfigObject):
         return hashlib.pbkdf2_hmac('sha512', pass_bytes, salt_bytes, int(2 ** 14))
 
     async def ensure_path(self, local_dir):
+        local_dir = self.format_path(local_dir)
         host = await self.get_host()
         try:
             return (await host.run_command(f'realpath "{local_dir}"')).strip('\n')
@@ -40,10 +51,10 @@ class Env(ConfigObject):
     @staticmethod
     def _create_keyfile_cmd(var_name):
         return (
-            f'{var_name}=$(mktemp /tmp/key.XXXXXXXXXX) && '  # TODO: safer create file, ensure in ram
-            f'trap "dd if=/dev/zero of=\\"${{{var_name}}}\\" status=none bs=1 count=1K ; '
-            f'rm -f \\"${{{var_name}}}\\"" EXIT SIGHUP SIGKILL SIGTERM SIGINT && '
-            f'( cat > "${{{var_name}}}" ) '
+            f'{var_name}=$(mktemp /tmp/key.XXXXXXXXXX)'  # TODO: safer create file, ensure in ram
+            # f' && trap "dd if=/dev/zero of=\\"${{{var_name}}}\\" status=none bs=1 count=1K ; '
+            # f'rm -f \\"${{{var_name}}}\\"" EXIT SIGHUP SIGKILL SIGTERM SIGINT'
+            f' && ( cat > "${{{var_name}}}" ) '
         )
 
     async def _create(self, key: bytes):
@@ -52,6 +63,7 @@ class Env(ConfigObject):
         :param key:
         :return:
         """
+        self._full_dir = await self.ensure_path(self.dir)
         host = await self.get_host()
         await host.run_command(
             '( ' + self._create_keyfile_cmd('F') + (
@@ -62,6 +74,7 @@ class Env(ConfigObject):
         )
 
     async def _decrypt(self, key: bytes):
+        self._full_dir = await self.ensure_path(self.dir)
         host = await self.get_host()
         await host.run_command(
             '( ' + self._create_keyfile_cmd('F') + (
@@ -73,11 +86,11 @@ class Env(ConfigObject):
 
     @StateChange('loaded', 'unlocked')
     async def unlock(self):
-        self._full_dir = await self.ensure_path(self.dir)
         try:
             await self._decrypt(self._get_key()[:32])
         except CommandError as e:
             err_str = re.sub(r'\s+', ' ', str(e))
+            print('ooooooooo', err_str)
             if ': this file or directory is already unlocked' in err_str:
                 return
             elif ': No such file or directory' in err_str:
@@ -89,5 +102,5 @@ class Env(ConfigObject):
     async def lock(self):
         host = await self.get_host()
         await host.run_command(
-            f'fscrypt lock "{self._full_dir}"',
+            f'fscrypt lock --drop-caches=false "{self._full_dir}"',
         )

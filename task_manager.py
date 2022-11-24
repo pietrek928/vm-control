@@ -2,6 +2,7 @@ from asyncio import create_task, set_event_loop, AbstractEventLoop, run_coroutin
 from functools import partial
 from inspect import isasyncgen
 from time import perf_counter
+from traceback import print_exception
 from typing import Optional
 
 from async_ import make_thread_loop
@@ -100,11 +101,16 @@ global_task_manager_loop = make_thread_loop()
 
 
 async def _wrap_async_task(coro, task: Task):
-    if isasyncgen(coro):
-        async for msg in coro:
-            task.set_message(str(msg))
-    else:
-        await coro
+    try:
+        if isasyncgen(coro):
+            async for msg in coro:
+                task.set_message(str(msg))
+        else:
+            await coro
+    except Exception as e:
+        print_exception(e)
+        print('!!!!!!!!!!', str(e))
+        task.set_message(str(e))
 
 
 async def _run_task(coro, descr):
