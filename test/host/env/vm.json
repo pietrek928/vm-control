@@ -1,0 +1,1 @@
+{"class_name": "QemuVM", "dir": "elo", "name": "elo", "arch": "x86_64", "cpu": "host", "smp": 4, "vga": "virtio", "ram_mb": 1024.0, "net": "none", "virtio": true, "drives": "../test_drive"}
