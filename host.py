@@ -1,7 +1,6 @@
-from asyncio import StreamReader
-from asyncio.subprocess import PIPE
 from os import getlogin
-from typing import Iterable, Tuple, Union, Optional
+from os import getlogin
+from typing import Iterable, Tuple, Optional, AnyStr
 
 from asyncssh import connect, SSHClientConnectionOptions, SSHClientConnection, ChannelOpenError
 
@@ -124,6 +123,7 @@ class SSHHost(ConfigObject):
             username=self.username or None,
             password=self.password or None,
             options=SSHClientConnectionOptions(
+                encoding=None,
                 client_version='xD',
             ),
         )
@@ -137,22 +137,16 @@ class SSHHost(ConfigObject):
         await session.wait_closed()
 
     async def run_command(
-            self, cmd: str, input: Optional[Union[str, bytes]] = None,
+            self, cmd: str, input: Optional[AnyStr] = None,
             timeout: Optional[float] = None, envs: Iterable[Tuple[str, str]] = (),
             retry_count: int = 3
     ) -> str:
         print(f'{cmd} input={input}')
-        if input:
-            stdin = StreamReader()
-            if isinstance(input, str):
-                input = input.encode('utf-8')
-            stdin.feed_data(input)
-            stdin.feed_eof()
-        else:
-            stdin = PIPE
+        if isinstance(input, str):
+            input = input.encode('utf-8')
         try:
             res = await (await self.withstate('connected')).session.run(
-                cmd, stdin=stdin, timeout=timeout, env=envs
+                cmd, input=input, timeout=timeout, env=envs
             )
         except ChannelOpenError as e:
             if 'SSH connection closed' in str(e) and retry_count > 0:
@@ -163,7 +157,6 @@ class SSHHost(ConfigObject):
                     envs=envs, retry_count=retry_count - 1
                 )
             raise
-        print('eeeeeeeeeee', res)
 
         exit_code = res.returncode
         if exit_code is None:
@@ -171,7 +164,7 @@ class SSHHost(ConfigObject):
         if exit_code:
             raise CommandError(
                 f'Command `{cmd}` failed with code {exit_code}; '
-                f'stderr: {res.stderr}'
+                f'stderr: {res.stderr.decode("utf-8")}'
             )
 
-        return res.stdout
+        return res.stdout.decode('utf-8')

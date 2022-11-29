@@ -52,8 +52,8 @@ class Env(ConfigObject):
     def _create_keyfile_cmd(var_name):
         return (
             f'{var_name}=$(mktemp /tmp/key.XXXXXXXXXX)'  # TODO: safer create file, ensure in ram
-            # f' && trap "dd if=/dev/zero of=\\"${{{var_name}}}\\" status=none bs=1 count=1K ; '
-            # f'rm -f \\"${{{var_name}}}\\"" EXIT SIGHUP SIGKILL SIGTERM SIGINT'
+            f' && trap "dd if=/dev/zero of=\\"${{{var_name}}}\\" status=none bs=1 count=1K ; '
+            f'rm -f \\"${{{var_name}}}\\"" EXIT SIGHUP SIGKILL SIGTERM SIGINT'
             f' && ( cat > "${{{var_name}}}" ) '
         )
 
@@ -63,6 +63,7 @@ class Env(ConfigObject):
         :param key:
         :return:
         """
+        self._full_dir = None
         self._full_dir = await self.ensure_path(self.dir)
         host = await self.get_host()
         await host.run_command(
@@ -74,6 +75,7 @@ class Env(ConfigObject):
         )
 
     async def _decrypt(self, key: bytes):
+        self._full_dir = None
         self._full_dir = await self.ensure_path(self.dir)
         host = await self.get_host()
         await host.run_command(
@@ -90,7 +92,6 @@ class Env(ConfigObject):
             await self._decrypt(self._get_key()[:32])
         except CommandError as e:
             err_str = re.sub(r'\s+', ' ', str(e))
-            print('ooooooooo', err_str)
             if ': this file or directory is already unlocked' in err_str:
                 return
             elif ': No such file or directory' in err_str:

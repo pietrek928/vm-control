@@ -37,13 +37,13 @@ class QemuVM(ConfigObject):
 
     @StateChange('loaded', 'started')
     async def start(self):
-        print('aaaaaaaaaaaaaaa')
         cmd = ShellCommand(f'qemu-system-{self.arch}') \
             .a('name', self.name) \
             .a('enable-kvm') \
             .a('machine', 'type=pc,accel=kvm') \
             .a('smp', self.smp) \
             .a('vga', self.vga) \
+            .a('nographic') \
             .a('m', f'{self.ram_mb}M') \
             .a('usb') \
             .a('device', 'usb-tablet')
