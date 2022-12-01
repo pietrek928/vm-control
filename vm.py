@@ -55,8 +55,7 @@ class QemuVM(ConfigObject):
                 cmd.a('drive', await (await self.o(d).withstate('created')).get_mount_params())
 
         env = await self.get_env()
-        # process ?
-        await env.run_command(cmd.cmd)
+        await env.start_process(cmd.cmd)
 
 
 class DriveImage(ConfigObject):

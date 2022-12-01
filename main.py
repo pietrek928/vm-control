@@ -14,7 +14,7 @@ import env  # noqa
 import vm  # noqa
 from gui import Gtk, HierarchyView, gtk_func, global_gtk_loop, stop_gtk_loop
 from loader import ObjectLoader
-from task_manager import global_task_manager, run_task
+from task_manager import global_task_manager, run_task, Task
 
 # css = b'''
 # .error {
@@ -99,24 +99,29 @@ def create_windows():
     win.show_all()
 
 
-async def monitor():
+async def monitor(task: Task):
     a = 1
     while True:
         await sleep(1.)
         a += 1
+        if a >= 100:
+            a = 0
+        task.set_progress(a / 100.)
         yield a
 
 
 # async def test():
 #     host = loader.load('', '/test/host')
-#     print(await host.run_command(
-#         '( F=$(mktemp /tmp/key.XXXXXXXXXX) && ( cat > "${F}" ) && ls "/home/pietrek/.test-env" && fscrypt unlock "/home/pietrek/.test-env" --key="$F" )',
-#         input=b'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
-#     ))
+#     env = loader.load('', '/test/host/env')
+#     await (await env.withstate('unlocked')).upload_file(
+#         '',
+#         '',
+#     )
 
 
-run_task(monitor(), 'test')
-# run_task(test(), 'test2')
+task = Task('test1', progress=Task)
+run_task(monitor(task), task)
+# run_task(test(), Task('test2'))
 
 create_windows()
 

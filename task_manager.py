@@ -113,13 +113,13 @@ async def _wrap_async_task(coro, task: Task):
         task.set_message(str(e))
 
 
-async def _run_task(coro, descr):
-    task = Task(descr)
+async def _run_task(coro, task: Task):
     task.set_task(_wrap_async_task(coro, task))
     global_task_manager.add_task(task)
 
 
-def run_task(coro, descr):
+def run_task(coro, task: Task):
     run_coroutine_threadsafe(
-        _run_task(coro, descr), global_task_manager_loop
+        _run_task(coro, task),
+        global_task_manager_loop
     )

@@ -2,3 +2,4 @@ PyGObject
 PyGObject-stubs
 pycairo
 asyncssh
+aiofiles

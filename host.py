@@ -1,11 +1,12 @@
-from os import getlogin
+from asyncio import wait, FIRST_COMPLETED, create_task
 from os import getlogin
 from typing import Iterable, Tuple, Optional, AnyStr
 
-from asyncssh import connect, SSHClientConnectionOptions, SSHClientConnection, ChannelOpenError
+from asyncssh import connect, SSHClientConnectionOptions, SSHClientConnection, ChannelOpenError, SSHClientProcess
 
-from gui import ConfigObject, EnField, StrField, IntField, StateChange
+from gui import ConfigObject, EnField, StrField, IntField, StateChange, decode_data
 from session import CommandError, SessionProcess
+from task_manager import Task, run_task
 
 global last_port
 last_port = 22243
@@ -164,7 +165,7 @@ class SSHHost(ConfigObject):
         if exit_code:
             raise CommandError(
                 f'Command `{cmd}` failed with code {exit_code}; '
-                f'stderr: {res.stderr.decode("utf-8")}'
+                f'stderr: {decode_data(res.stderr)}'
             )
 
-        return res.stdout.decode('utf-8')
+        return decode_data(res.stdout)

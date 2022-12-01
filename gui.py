@@ -47,6 +47,13 @@ def gtk_func(f):
     return wrapped
 
 
+def decode_data(data: bytes):
+    try:
+        return data.decode('utf-8')
+    except Exception:
+        return str(data)
+
+
 class Field:
     def __init__(self, default=None):
         self.default = default
@@ -231,8 +238,8 @@ class StateChange:
 
 
 def _button_callback(self, state_to, descr, button):
-    from task_manager import run_task
-    run_task(self.withstate(state_to), descr)
+    from task_manager import run_task, Task
+    run_task(self.withstate(state_to), Task(descr))
 
 
 class ConfigObject:
