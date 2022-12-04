@@ -11,6 +11,7 @@ import time
 from asyncio import sleep
 
 import env  # noqa
+import gpu  # noqa
 import vm  # noqa
 from gui import Gtk, HierarchyView, gtk_func, global_gtk_loop, stop_gtk_loop
 from loader import ObjectLoader
@@ -49,7 +50,6 @@ from task_manager import global_task_manager, run_task, Task
 
 loader = ObjectLoader()
 
-
 # host = SSHHost('test/host', loader, {
 #     'host': '10.1.7.22',
 #     'user': 'pietrek',
@@ -65,13 +65,8 @@ loader = ObjectLoader()
 #     'drives': 'test_drive',
 # })
 # loader._loaded['test/host/env/vm'] = test_vm
-# test_drive = vm.DriveImage('test/host/env/test_drive', loader, {
-#     'path': 'test_drive',
-#     'size_mb': 1e9,
-#     'mode': 'drive',
-#     'format': 'qcow2',
-# })
-# loader._loaded['test/host/env/test_drive'] = test_drive
+# test_gpus = gpu.GPUS('test/host/gpus', loader, {})
+# loader._loaded['test/host/gpus'] = test_gpus
 
 
 #
@@ -110,18 +105,15 @@ async def monitor(task: Task):
         yield a
 
 
-# async def test():
-#     host = loader.load('', '/test/host')
-#     env = loader.load('', '/test/host/env')
-#     await (await env.withstate('unlocked')).upload_file(
-#         '',
-#         '',
-#     )
+async def test():
+    host = loader.load('', '/test/host')
+    gpus = loader.load('', '/test/host/gpus')
+    await gpus.detect_gpus()
 
 
 task = Task('test1', progress=Task)
 run_task(monitor(task), task)
-# run_task(test(), Task('test2'))
+run_task(test(), Task('test2'))
 
 create_windows()
 

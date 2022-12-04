@@ -3,3 +3,4 @@ PyGObject-stubs
 pycairo
 asyncssh
 aiofiles
+lxml
